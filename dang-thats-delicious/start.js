@@ -1,5 +1,7 @@
 require('./models/Store');
 require('./models/User');
+require('./models/Review');
+
 const mongoose = require('mongoose');
 const Store = mongoose.model('Store');
 
