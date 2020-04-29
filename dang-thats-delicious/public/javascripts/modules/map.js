@@ -1,47 +1,36 @@
 import axios from 'axios';
-import { $ } from './bling';
+import {$} from './bling';
 
-navigator.geolocation.getCurrentPosition((data) => {
-    console.log(data);
-    var lat = data.coords.latitude;
-    var lng = data.coords.longitude;
-
-    console.log([lat,lng])
-
-}, (err) => {
-    console.error(err);
+const mapOptions = (lat, lng) => ({
+    center: {lat, lng},
+    zoom: 10
 });
 
-const mapOptions = {
-  center: { lat: 43.2, lng: -79.8 },
-  zoom: 10
-};
-
 function loadPlaces(map, lat = 43.2, lng = -79.8) {
-  axios.get(`/api/stores/near?lat=${lat}&lng=${lng}`)
-    .then(res => {
-      const places = res.data;
-      if (!places.length) {
-        alert('no places found!');
-        return;
-      }
-      // create a bounds
-      const bounds = new google.maps.LatLngBounds();
-      const infoWindow = new google.maps.InfoWindow();
+    axios.get(`/api/stores/near?lat=${lat}&lng=${lng}`)
+        .then(res => {
+            const places = res.data;
+            if (!places.length) {
+                alert('no places found!');
+                return;
+            }
+            // create a bounds
+            const bounds = new google.maps.LatLngBounds();
+            const infoWindow = new google.maps.InfoWindow();
 
-      const markers = places.map(place => {
-        const [placeLng, placeLat] = place.location.coordinates;
-        const position = { lat: placeLat, lng: placeLng };
-        bounds.extend(position);
-        const marker = new google.maps.Marker({ map, position });
-        marker.place = place;
-        return marker;
-      });
+            const markers = places.map(place => {
+                const [placeLng, placeLat] = place.location.coordinates;
+                const position = {lat: placeLat, lng: placeLng};
+                bounds.extend(position);
+                const marker = new google.maps.Marker({map, position});
+                marker.place = place;
+                return marker;
+            });
 
-      // when someone clicks on a marker, show the details of that place
-      markers.forEach(marker => marker.addListener('click', function() {
-        console.log(this.place);
-        const html = `
+            // when someone clicks on a marker, show the details of that place
+            markers.forEach(marker => marker.addListener('click', function () {
+                console.log(this.place);
+                const html = `
           <div class="popup">
             <a href="/store/${this.place.slug}">
               <img src="/uploads/${this.place.photo || 'store.png'}" alt="${this.place.name}" />
@@ -49,29 +38,37 @@ function loadPlaces(map, lat = 43.2, lng = -79.8) {
             </a>
           </div>
         `;
-        infoWindow.setContent(html);
-        infoWindow.open(map, this);
-      }));
+                infoWindow.setContent(html);
+                infoWindow.open(map, this);
+            }));
 
-      // then zoom the map to fit all the markers perfectly
-      map.setCenter(bounds.getCenter());
-      map.fitBounds(bounds);
-    });
+            // then zoom the map to fit all the markers perfectly
+            map.setCenter(bounds.getCenter());
+            map.fitBounds(bounds);
+        });
 
 }
 
 function makeMap(mapDiv) {
-  if (!mapDiv) return;
-  // make our map
-  const map = new google.maps.Map(mapDiv, mapOptions);
-  loadPlaces(map);
+    if (!mapDiv) return;
+    // make our map
+    navigator.geolocation.getCurrentPosition((data) => {
+        var lat = data.coords.latitude;
+        var lng = data.coords.longitude;
 
-  const input = $('[name="geolocate"]');
-  const autocomplete = new google.maps.places.Autocomplete(input);
-  autocomplete.addListener('place_changed', () => {
-    const place = autocomplete.getPlace();
-    loadPlaces(map, place.geometry.location.lat(), place.geometry.location.lng());
-  });
+        const map = new google.maps.Map(mapDiv, mapOptions(lat, lng));
+
+        loadPlaces(map, lat, lng);
+
+        const input = $('[name="geolocate"]');
+        const autocomplete = new google.maps.places.Autocomplete(input);
+        autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace();
+            loadPlaces(map, place.geometry.location.lat(), place.geometry.location.lng());
+        });
+    }, (err) => {
+        console.error(err);
+    });
 }
 
 export default makeMap;
